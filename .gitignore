@@ -1,0 +1,12 @@
+
+#user IDE cache
+*.gerasimchuk
+*.lytvynenko
+*.JohnCh_Developex
+#IDE backup files
+*.bak
+*.ini
+LST/
+Output/
+/out.txt
+build
