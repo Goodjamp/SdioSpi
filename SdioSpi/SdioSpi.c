@@ -1,6 +1,5 @@
 #include "SdioSpi.h"
 
-
 /*
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
  * | Command| Argument               | Resp|Data |      Abbreviation        | Description                                         |
@@ -32,7 +31,7 @@
  * | ACMD23 | Number of blocks[22:0] | R1  | No  | SET_WR_BLOCK_ERASE_COUNT | For only SDC. Define number of blocks to pre-erase  |
  * |        |                        |     |     |                          | with next multi-block write command                 |
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
- * | CMD24  | Address[31:0]          | R1  | Yes | WRITE_BLOCK              | Write a block                                      |
+ * | CMD24  | Address[31:0]          | R1  | Yes | WRITE_BLOCK              | Write a block                                       |
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
  * | CMD25  | Address[31:0]          | R1  | Yes | WRITE_MULTIPLE_BLOCK     | Write multiple blocks                               |
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
@@ -42,21 +41,24 @@
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
 
  */
-#define SDIO_CMD0     0
-#define SDIO_CMD1     0
-#define SDIO_CMD41    0
-#define SDIO_CMD8     0
-#define SDIO_CMD9     0
-#define SDIO_CMD10    0
-#define SDIO_CMD12    0
-#define SDIO_CMD16    0
-#define SDIO_CMD17    0
-#define SDIO_CMD18    0
-#define SDIO_CMD23    0
-#define SDIO_CMD24    0
-#define SDIO_CMD25    0
-#define SDIO_CMD55    0
-#define SDIO_CMD58    0
+
+typedef enum {
+    SDIO_CMD0 = 0,
+    SDIO_CMD1 = 0,
+    SDIO_CMD41 = 0,
+    SDIO_CMD8 = 0,
+    SDIO_CMD9 = 0,
+    SDIO_CMD10 = 0,
+    SDIO_CMD12 = 0,
+    SDIO_CMD16 = 0,
+    SDIO_CMD17 = 0,
+    SDIO_CMD18 = 0,
+    SDIO_CMD23 = 0,
+    SDIO_CMD24 = 0,
+    SDIO_CMD25 = 0,
+    SDIO_CMD55 = 0,
+    SDIO_CMD58 = 0,
+} SdioCommsnd;
 
 SpioSpiResult sdioSpiInit(SdioSpiH *handler, const SdioSpiCb *cb)
 {
