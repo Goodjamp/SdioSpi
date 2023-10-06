@@ -2,12 +2,13 @@ cmake_minimum_required(VERSION 3.0.0)
 project(testSpioSpi)
 
 set(LIB_SRC
-    SdioSpi/SdioSpi.c
-    SdioSpi/SdioSpi.h
+    SdSpi/SdSpi.c
+    SdSpi/SdSpi.h
+    SdSpi/SdSpiInternal.h
 )
 
 set(LIB_PATH
-    SdioSpi
+    SdSpi
 )
 
 set(TEST_SRC
@@ -18,4 +19,4 @@ include_directories(
     ${LIB_PATH}
 )
 
-add_executable(testSdioSpi.exe ${LIB_SRC} ${TEST_SRC})
+add_executable(${CMAKE_PROJECT_NAME} ${LIB_SRC} ${TEST_SRC})
