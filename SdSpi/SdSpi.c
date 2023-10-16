@@ -127,8 +127,8 @@ static SdioSpiIntStatus sdSpiSerializeReq(uint8_t *buffer, SdSpiCmdReq request)
 
     return SD_SPI_OK_INT_STATUS;
 }
-
 static SdSpiResult sdSpiDeserializeResp(uint8_t *buffer, SdSpiCmdResp *response, SdRespType respType)
+
 {
     size_t r1Pos = FIELD_OFFSET(RespLayout, r1);
     size_t respPos = FIELD_OFFSET(RespLayout, resp);
@@ -287,6 +287,10 @@ static SdSpiResult sdSpiCmdTransaction(SdSpiH *handler, SdSpiCmdReq request, SdS
                                      FIELD_SIZE(RespLayout, r1)) == false) {
             return SD_SPI_RESULT_RECEIVE_CB_RETURN_ERROR;
         }
+
+        /*
+         * If the 8-th bit is clear - the R1 response received
+         */
         if (respBuff[FIELD_OFFSET(RespLayout, r1)] != 0xFF) {
             break;
         }
@@ -338,7 +342,9 @@ static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
     SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
 
     while (handler->cb.sdSpiGetTimeMs() - startTime < SD_EXIT_IDLE_TIMEOUTE) {
-        /***CMD55***/
+        /*
+         * CMD55 is a leading command before send comamnd CMD41
+         */
         request.cmd = SD_CMD55;
         result = sdSpiCmdTransaction(handler, request, &response);
         if (result != SD_SPI_RESULT_OK) {
@@ -484,8 +490,8 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
             if (result == SD_SPI_RESULT_OK && response.r1 == 0) {
 
                 /*
-                * If length type equal to Byte, we need to set block length equal to 512
-                */
+                 * If length type equal to Byte, we need to set block length equal to 512
+                 */
                 if (response.R3.cardCapacityStatys == OCR_CARD_CAPACITY_STATUS_SDSC) {
 
                     /*
@@ -494,10 +500,11 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
                     request.cmd = SD_CMD16;
                     request.cmd16.blockLength = 512;
                     result = sdSpiCmdTransaction(handler, request, &response);
-                    if (!(result == SD_SPI_RESULT_OK && response.r1 == 0)) {
+                    if (result == SD_SPI_RESULT_OK && response.r1 != 0)
+                    {
                         /*
-                        * Faile the cmd16 transaction
-                        */
+                         * Faile the cmd16 transaction
+                         */
                         intTrace->intStatus = SD_SPI_SET_BLOCK_SIZE_ERR_INT_STATUS;
                         result = SD_SPI_RESULT_INTERNAL_ERROR;
                     }
@@ -533,15 +540,35 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
             request.cmd = SD_CMD16;
             request.cmd16.blockLength = 512;
             result = sdSpiCmdTransaction(handler, request, &response);
-            if (!(result == SD_SPI_RESULT_OK && response.r1 == 0)) {
-                result = SD_SPI_RESULT_INIT_VER_1_SET_BLOCK_LEN_ERROR;
+            if (result == SD_SPI_RESULT_OK && response.r1 != 0)
+            {
+                /*
+                 * Faile the cmd16 transaction
+                 */
+                intTrace->intStatus = SD_SPI_SET_BLOCK_SIZE_ERR_INT_STATUS;
+                result = SD_SPI_RESULT_INTERNAL_ERROR;
             }
-        } else if (result == ){
+        } else {
             /*
-             * In case of error, try init MMC Ver. 3
+             * In case of any type of a error (error reply, no response, timeoute), try init MMC Ver. 3
              */
+            result = sdSpiCardRun(handler, SD_CARD_VERSION_MMC_VER_2);
+            if (result == SD_SPI_RESULT_OK) {
+                /*
+                 * Set block length equal to type 512
+                 */
+                request.cmd = SD_CMD16;
+                request.cmd16.blockLength = 512;
+                result = sdSpiCmdTransaction(handler, request, &response);
+                if (!(result == SD_SPI_RESULT_OK && response.r1 == 0)) {
+                    /*
+                     * Faile the cmd16 transaction
+                     */
+                    intTrace->intStatus = SD_SPI_SET_BLOCK_SIZE_ERR_INT_STATUS;
+                    result = SD_SPI_RESULT_INTERNAL_ERROR;
+                }
+            }
         }
-
     }
 
     return result;
