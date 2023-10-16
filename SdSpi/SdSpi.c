@@ -57,7 +57,7 @@ static uint8_t crc7(uint8_t message[], uint32_t messageSize)
     return (crc >> 1) & 0b1111111;
 }
 
-static SdSpiResult sdSpiSerializeReq(uint8_t *buffer, SdSpiCmdReq request)
+static SdioSpiIntStatus sdSpiSerializeReq(uint8_t *buffer, SdSpiCmdReq request)
 {
     unsigned int argPos= FIELD_OFFSET(ReqLayout, argument);
 
@@ -119,13 +119,13 @@ static SdSpiResult sdSpiSerializeReq(uint8_t *buffer, SdSpiCmdReq request)
         break;
 
     default:
-        return SD_SPI_RESULT_INTERNAL_ERROR;
+        return SD_SPI_UNSUPORTED_COMMAND_ERR_INT_STATUS;
     }
 
     buffer[FIELD_OFFSET(ReqLayout, cmd)] = (request.cmd ) | (0x1 << 6);
     buffer[FIELD_OFFSET(ReqLayout, crc)] = (crc7(buffer, 5) << 1) | 0x1;
 
-    return SD_SPI_RESULT_OK;
+    return SD_SPI_OK_INT_STATUS;
 }
 
 static SdSpiResult sdSpiDeserializeResp(uint8_t *buffer, SdSpiCmdResp *response, SdRespType respType)
@@ -173,7 +173,7 @@ static SdSpiResult sdSpiDeserializeResp(uint8_t *buffer, SdSpiCmdResp *response,
     case SD_RESPONSE_TYPE_R7:
         if (BIT_MASK(buffer[respPos], SD_R7_TEMPLATE_POS, SD_R7_TEMPLATE_MASK)
             != SD_CMD41_PATTERN_VALUE) {
-            return SD_SPI_RESULT_RESPONSE_R7_PATTERN_ERROR;
+            return SD_SPI_RESPONSE_R7_PATTERN_ERR_INT_STATUS;
         }
         response->R7.voltageAccepted =
             (buffer[respPos] & SD_R7_VHS) != 0;
@@ -183,7 +183,7 @@ static SdSpiResult sdSpiDeserializeResp(uint8_t *buffer, SdSpiCmdResp *response,
         break;
     }
 
-    return SD_SPI_RESULT_OK;
+    return SD_SPI_OK_INT_STATUS;
 }
 
 static size_t sdSpiGetRespSize(SdRespType respType)
@@ -214,17 +214,20 @@ static SdSpiResult sdSpiWaiteBusy(SdSpiH *handler)
 {
     uint8_t buff = 0x00;
     uint32_t startTime = handler->cb.sdSpiGetTimeMs();
+    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
 
     while (handler->cb.sdSpiGetTimeMs() - startTime > SD_BUSY_TIMEOUTE) {
         if (handler->cb.sdSpiReceive(&buff, 1) == false) {
-            return SD_SPI_RESULT_SPI_RECEIVE_CB_RETURN_ERROR;
+            return SD_SPI_RESULT_RECEIVE_CB_RETURN_ERROR;
         }
         if (buff != 0x00) {
             break;
         }
     }
 
-    return buff == 0x00 ? SD_SPI_BUSY_TIMEOUTE_ERROR : SD_SPI_RESULT_OK;
+    return buff == 0x00
+           ? (intTrace->intStatus = SD_SPI_BUSY_TIMEOUTE_ERR_INT_STATUS, SD_SPI_RESULT_INTERNAL_ERROR)
+           : SD_SPI_RESULT_OK;
 }
 
 /*
@@ -238,25 +241,25 @@ static SdSpiResult sdSpiWaiteBusy(SdSpiH *handler)
 static SdSpiResult sdSpiCmdTransaction(SdSpiH *handler, SdSpiCmdReq request, SdSpiCmdResp *response)
 {
     uint8_t reqBuff[sizeof(ReqLayout)];
-    SdSpiResult result;
     uint32_t rxCnt;
+    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
 
     /*
      * Serialize request
      */
-    result = sdSpiSerializeReq(reqBuff, request);
-    if (result != SD_SPI_RESULT_OK) {
-        return result;
+    intTrace->intStatus = sdSpiSerializeReq(reqBuff, request);
+    if (intTrace->intStatus != SD_SPI_OK_INT_STATUS) {
+        return SD_SPI_RESULT_INTERNAL_ERROR;
     }
 
     /*
      * Send request
      */
     if (handler->cb.sdSpiSetCsState(false) == false) {
-        return SD_SPI_RESULT_SPI_SET_CS_CB_RETURN_ERROR;
+        return SD_SPI_RESULT_SET_CS_CB_RETURN_ERROR;
     }
     if (handler->cb.sdSpiSend(reqBuff, sizeof(ReqLayout)) == false) {
-        return SD_SPI_RESULT_SPI_SEND_CB_RETURN_ERROR;
+        return SD_SPI_RESULT_SEND_CB_RETURN_ERROR;
     }
 
     /*
@@ -274,7 +277,7 @@ static SdSpiResult sdSpiCmdTransaction(SdSpiH *handler, SdSpiCmdReq request, SdS
      * - 1 - 8 bytes for the R1, R2, R3, R7 response for the MMC card
      * Take the maximum bytes number (+2) for the timeote
      */
-    for (uint32_t k = 0; k < (SD_WAITE_RESPONSE_IN_BYTES 2); k++)
+    for (uint32_t k = 0; k < (SD_WAITE_RESPONSE_IN_BYTES + 2); k++)
     {
         /*
          * In case of the R1b response type we need to continuous
@@ -282,37 +285,48 @@ static SdSpiResult sdSpiCmdTransaction(SdSpiH *handler, SdSpiCmdReq request, SdS
          */
         if (handler->cb.sdSpiReceive(&respBuff[FIELD_OFFSET(RespLayout, r1)],
                                      FIELD_SIZE(RespLayout, r1)) == false) {
-            return SD_SPI_RESULT_SPI_RECEIVE_CB_RETURN_ERROR;
+            return SD_SPI_RESULT_RECEIVE_CB_RETURN_ERROR;
         }
         if (respBuff[FIELD_OFFSET(RespLayout, r1)] != 0xFF) {
             break;
         }
     }
+
+    /*
+     * The card don't reply
+     */
     if (respBuff[FIELD_OFFSET(RespLayout, r1)] == 0xFF) {
         return SD_SPI_RESULT_NO_RESPONSE_ERROR;
     }
+
+    /*
+     * Receive rest part of the reaponse
+     */
     if (handler->cb.sdSpiReceive(&respBuff[FIELD_OFFSET(RespLayout, resp)],
                                  respSize - FIELD_SIZE(RespLayout, r1))
         == false) {
-        return SD_SPI_RESULT_SPI_RECEIVE_CB_RETURN_ERROR;
+        return SD_SPI_RESULT_RECEIVE_CB_RETURN_ERROR;
     }
 
     if (handler->cb.sdSpiSetCsState(false) == true) {
-        return SD_SPI_RESULT_SPI_SET_CS_CB_RETURN_ERROR;
+        return SD_SPI_RESULT_SET_CS_CB_RETURN_ERROR;
     }
 
     /*
      * Deserialize response
      */
-    result = sdSpiDeserializeResp(respBuff, response, respType);
-    if (result != SD_SPI_RESULT_OK) {
-        return result;
+    intTrace->intStatus = sdSpiDeserializeResp(respBuff, response, respType);
+    if (intTrace->intStatus != SD_SPI_OK_INT_STATUS) {
+        return SD_SPI_RESULT_INTERNAL_ERROR;
     }
 
     /*
-     * In case of R1b response type, we need to non zero value from th  line
+     * In case of R1b response type, we still need to waite to non zero value from the line
+     * before complete using the card
      */
-    return respType == SD_RESPONSE_TYPE_R1B ? sdSpiWaiteBusy(handler): SD_SPI_RESULT_OK;
+    return (respType == SD_RESPONSE_TYPE_R1B)
+           ? sdSpiWaiteBusy(handler)
+           : SD_SPI_RESULT_OK;
 }
 
 static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
@@ -321,8 +335,9 @@ static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
     SdSpiCmdResp response;
     uint32_t startTime = handler->cb.sdSpiGetTimeMs();
     SdSpiResult result = SD_SPI_RESULT_OK;
+    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
 
-    while (handler->cb.sdSpiGetTimeMs - startTime < SD_EXIT_IDLE_TIMEOUTE) {
+    while (handler->cb.sdSpiGetTimeMs() - startTime < SD_EXIT_IDLE_TIMEOUTE) {
         /***CMD55***/
         request.cmd = SD_CMD55;
         result = sdSpiCmdTransaction(handler, request, &response);
@@ -330,7 +345,8 @@ static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
             break;
         }
         if (response.r1 != SD_R1_IDLE_STATE) {
-            result = SD_SPI_RESULT_CMD55_REPLY_ERROR;
+            intTrace->intStatus = SD_SPI_CMD55_REPLY_ERR_INT_STATUS;
+            result = SD_SPI_RESULT_INTERNAL_ERROR;
             break;
         }
 
@@ -354,7 +370,8 @@ static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
             break;
         }
         if (response.r1 != SD_R1_IDLE_STATE) {
-            result = SD_SPI_RESULT_CMD41_REPLY_ERROR;
+            intTrace->intStatus = SD_SPI_CMD55_REPLY_ERR_INT_STATUS;
+            result = SD_SPI_CMD41_REPLY_ERR_INT_STATUS;
             break;
         }
     }
@@ -370,6 +387,7 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
     SdSpiCmdResp response;
     uint8_t transactionBuff[SD_SPI_TRANSACTION_BUFF_SIZE];
     bool initComplete = false;
+    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
 
     if (handler == NULL) {
         return SD_SPI_RESULT_HANDLER_NULL_ERROR;
@@ -378,21 +396,32 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
         return SD_SPI_RESULT_CB_NULL_ERROR;
     }
     if (cb->sdSpiSend == NULL) {
-        return SD_SPI_RESULT_SPI_SEND_CB_NULL_ERROR;
+        return SD_SPI_RESULT_SEND_CB_NULL_ERROR;
     }
     if (cb->sdSpiReceive == NULL) {
-        return SD_SPI_RESULT_SPI_RECEIVE_CB_NULL_ERROR;
+        return SD_SPI_RESULT_RECEIVE_CB_NULL_ERROR;
     }
     if (cb->sdSpiSetCsState == NULL) {
-        return SD_SPI_RESULT_SPI_SET_CS_CB_NULL_ERROR;
+        return SD_SPI_RESULT_SET_CS_CB_NULL_ERROR;
     }
     if (cb->sdSpiSetSckFrq == NULL) {
-        return SD_SPI_RESULT_SPI_SET_FRQ_CB_NULL_ERROR;
+        return SD_SPI_RESULT_SET_FRQ_CB_NULL_ERROR;
     }
     if (cb->sdSpiGetTimeMs == NULL) {
-        return SD_SPI_RESULT_SPI_GET_TIME_CB_NULL_ERROR;
+        return SD_SPI_RESULT_GET_TIME_CB_NULL_ERROR;
+    }
+    if (cb->sdSpiMalloc == NULL) {
+        return SD_SPI_RESULT_GET_TIME_CB_NULL_ERROR;
     }
     handler->cb = *cb;
+
+    uint32_t serviceBuffSize = 0;
+#ifdef ENABLE_ERROR_TRACE
+    serviceBuffSize += sizeof(SdioSpiIntTrace);
+#endif
+    if (handler->cb.sdSpiMalloc(serviceBuffSize) == NULL) {
+        return SD_SPI_RESULT_MALLOC_CB_RERTURN_NULL_ERROR;
+    }
     /*
      * Accordnig to the SD Documentation
      * section: 7.2.1 Mode Selection and Initilisation
@@ -409,17 +438,17 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
      */
     memset(transactionBuff, sizeof(transactionBuff), 0xFF);
     if (cb->sdSpiSetCsState(true) == false) {
-        return SD_SPI_RESULT_SPI_SET_CS_CB_RETURN_ERROR;
+        return SD_SPI_RESULT_SET_CS_CB_RETURN_ERROR;
     }
     if (cb->sdSpiSetSckFrq(SD_SPI_INITIAL_FRQ) == false) {
-        return SD_SPI_RESULT_SPI_SET_FRQ_CB_RETURN_ERROR;
+        return SD_SPI_RESULT_SET_FRQ_CB_RETURN_ERROR;
     }
 
     /*
      * Send > 74 SCK pulces
      */
     if (cb->sdSpiSend(transactionBuff, 10) == false) {
-        return SD_SPI_RESULT_SPI_SEND_CB_RETURN_ERROR;
+        return SD_SPI_RESULT_SEND_CB_RETURN_ERROR;
     }
 
     /*
@@ -431,7 +460,8 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
         return result;
     }
     if (response.r1 != SD_R1_IDLE_STATE) {
-        return SD_SPI_RESULT_INIT_SET_IDLE_ERROR;
+        intTrace->intStatus = SD_SPI_CMD55_REPLY_ERR_INT_STATUS;
+        return SD_SPI_SET_IDLE_ERR_INT_STATUS;
     }
 
     request.cmd = SD_CMD8;
@@ -447,7 +477,7 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
         if (sdSpiCardRun(handler, SD_CARD_VERSION_SD_VER_2_PLUS) == SD_SPI_RESULT_OK) {
 
             /*
-             * Test block lenght type
+             * Test block length type
              */
             request.cmd = SD_CMD58;
             result = sdSpiCmdTransaction(handler, request, &response);
@@ -459,20 +489,29 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
                 if (response.R3.cardCapacityStatys == OCR_CARD_CAPACITY_STATUS_SDSC) {
 
                     /*
-                    * Set block length equal to type 512
+                    * Set block length equal to 512
                     */
                     request.cmd = SD_CMD16;
                     request.cmd16.blockLength = 512;
                     result = sdSpiCmdTransaction(handler, request, &response);
                     if (!(result == SD_SPI_RESULT_OK && response.r1 == 0)) {
-                        result = SD_SPI_RESULT_INIT_VER_2_PLUS_SET_BLOCK_LEN_ERROR;
+                        /*
+                        * Faile the cmd16 transaction
+                        */
+                        intTrace->intStatus = SD_SPI_SET_BLOCK_SIZE_ERR_INT_STATUS;
+                        result = SD_SPI_RESULT_INTERNAL_ERROR;
                     }
                 }
             } else {
-                result = SD_SPI_RESULT_INIT_VER_2_PLUS_TEST_BLOCK_LEN_ERROR;
+                /*
+                 * Faile the cmd58 transaction
+                 */
+                intTrace->intStatus = SD_SPI_CHECK_BLOCK_SIZE_ERR_INT_STATUS;
+                result = SD_SPI_RESULT_INTERNAL_ERROR;
             }
         } else {
-            result = SD_SPI_RESULT_INIT_VER_2_PLUS_ERROR;
+            intTrace->intStatus = SD_SPI_INIT_VER_2_PLUS_ERR_INT_STATUS;
+            result = SD_SPI_RESULT_INTERNAL_ERROR;
         }
 
     } else if ((result == SD_SPI_RESULT_NO_RESPONSE_ERROR)
