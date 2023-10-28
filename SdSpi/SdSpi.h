@@ -22,6 +22,9 @@ typedef enum {
     SD_SPI_RESULT_MALLOC_CB_RERTURN_NULL_ERROR,
     SD_SPI_RESULT_INTERNAL_ERROR,
     SD_SPI_RESULT_NO_RESPONSE_ERROR,
+    SD_SPI_RESULT_DATA_NULL_ERROR,
+    SD_SPI_RESULT_DATA_LENGTH_ZERO_ERROR,
+    SD_SPI_RESULT_NOT_INIT_ERROR,
 } SdSpiResult;
 
 typedef enum {
@@ -30,8 +33,15 @@ typedef enum {
     SD_CARD_VERSION_MMC_VER_2
 } SdCardVersion;
 
+typedef enum {
+    SD_CARD_CAPCITY_STANDART,
+    SD_CARD_CAPCITY_HIGHT,    // SDHC
+    SD_CARD_CAPCITY_EXTENDED, // SDХC
+} SdCardCapacity;
+
 typedef struct {
     SdCardVersion version;
+    SdCardCapacity capcity;
 } SdSpiMetaInformation;
 
 typedef struct {
@@ -45,10 +55,15 @@ typedef struct {
 
 typedef struct {
     SdSpiCb cb;
-    int32_t internalError;
-    uint32_t dataBlockSize;
     SdSpiMetaInformation metaInformation;
+
+    /*
+     * The serviceBuff is used to save the internal errors.
+     * Also this buffer could be used as a traceBuffer
+     */
     uint8_t *serviceBuff;
+
+    uint8_t *transactionBuffer;
 } SdSpiH;
 
 SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb);

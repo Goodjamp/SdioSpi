@@ -27,7 +27,7 @@ typedef enum {
 
 typedef struct {
     SdioSpiIntStatus intStatus;
-} SdioSpiIntTrace;
+} SdioSpiInternalTrace;
 
 /*
  * Definitions:
@@ -375,7 +375,7 @@ typedef struct {
 
 typedef struct {
     /*
-     * The next fieal represent bits of R1 response
+     * The next fieald represent bits of R1 response
      */
     uint8_t r1;
 
@@ -399,5 +399,7 @@ typedef struct {
         } R3;
     };
 } SdSpiCmdResp;
+
+
 
 #endif // __SD_SPI_INTERNAL_H__

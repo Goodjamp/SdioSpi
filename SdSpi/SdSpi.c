@@ -214,7 +214,7 @@ static SdSpiResult sdSpiWaiteBusy(SdSpiH *handler)
 {
     uint8_t buff = 0x00;
     uint32_t startTime = handler->cb.sdSpiGetTimeMs();
-    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
+    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
 
     while (handler->cb.sdSpiGetTimeMs() - startTime > SD_BUSY_TIMEOUTE) {
         if (handler->cb.sdSpiReceive(&buff, 1) == false) {
@@ -242,7 +242,7 @@ static SdSpiResult sdSpiCmdTransaction(SdSpiH *handler, SdSpiCmdReq request, SdS
 {
     uint8_t reqBuff[sizeof(ReqLayout)];
     uint32_t rxCnt;
-    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
+    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
 
     /*
      * Serialize request
@@ -339,7 +339,7 @@ static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
     SdSpiCmdResp response;
     uint32_t startTime = handler->cb.sdSpiGetTimeMs();
     SdSpiResult result = SD_SPI_RESULT_OK;
-    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
+    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
 
     while (handler->cb.sdSpiGetTimeMs() - startTime < SD_EXIT_IDLE_TIMEOUTE) {
         /*
@@ -393,11 +393,12 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
     SdSpiCmdResp response;
     uint8_t transactionBuff[SD_SPI_TRANSACTION_BUFF_SIZE];
     bool initComplete = false;
-    SdioSpiIntTrace *intTrace = (SdioSpiIntTrace *)handler->serviceBuff;
+    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
 
     if (handler == NULL) {
         return SD_SPI_RESULT_HANDLER_NULL_ERROR;
     }
+    memset(handler, 0, sizeof(handler));
     if (cb == NULL) {
         return SD_SPI_RESULT_CB_NULL_ERROR;
     }
@@ -423,7 +424,7 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
 
     uint32_t serviceBuffSize = 0;
 #ifdef ENABLE_ERROR_TRACE
-    serviceBuffSize += sizeof(SdioSpiIntTrace);
+    serviceBuffSize += sizeof(SdioSpiInternalTrace);
 #endif
     if (handler->cb.sdSpiMalloc(serviceBuffSize) == NULL) {
         return SD_SPI_RESULT_MALLOC_CB_RERTURN_NULL_ERROR;
@@ -535,7 +536,7 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
         if (result == SD_SPI_RESULT_OK) {
 
             /*
-             * Set block length equal to type 512
+             * Set block length equal to 512
              */
             request.cmd = SD_CMD16;
             request.cmd16.blockLength = 512;
@@ -555,7 +556,7 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
             result = sdSpiCardRun(handler, SD_CARD_VERSION_MMC_VER_2);
             if (result == SD_SPI_RESULT_OK) {
                 /*
-                 * Set block length equal to type 512
+                 * Set block length equal to 512
                  */
                 request.cmd = SD_CMD16;
                 request.cmd16.blockLength = 512;
@@ -572,4 +573,21 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
     }
 
     return result;
+}
+
+SdSpiResult sdSpiReceive(SdSpiH *handler, uint8_t *data, size_t dataLength)
+{
+    if (handler == NULL) {
+        return SD_SPI_RESULT_HANDLER_NULL_ERROR;
+    }
+
+    if (data == NULL) {
+        return SD_SPI_RESULT_DATA_NULL_ERROR;
+    }
+
+    if (dataLength == 0) {
+        return SD_SPI_RESULT_DATA_LENGTH_ZERO_ERROR;
+    }
+
+    
 }
