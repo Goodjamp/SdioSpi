@@ -8,6 +8,8 @@
 
 #define ENABLE_ERROR_TRACE
 
+#define SDIO_SPI_FAT_LBA    512
+
 typedef enum {
     SD_SPI_OK_INT_STATUS,
     SD_SPI_UNSUPORTED_COMMAND_ERR_INT_STATUS,
@@ -23,11 +25,11 @@ typedef enum {
     SD_SPI_SET_BLOCK_SIZE_ERR_INT_STATUS,
     SD_SPI_CHECK_BLOCK_SIZE_ERR_INT_STATUS,
     SD_SPI_INIT_VER_2_PLUS_ERR_INT_STATUS,
-} SdioSpiIntStatus;
+} SdSpiIntStatus;
 
 typedef struct {
-    SdioSpiIntStatus intStatus;
-} SdioSpiInternalTrace;
+    SdSpiIntStatus intStatus;
+} SdSpiInternalTrace;
 
 /*
  * Definitions:
@@ -51,7 +53,12 @@ typedef struct {
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
  * | ACMD41 | *2                     | R1  | No  | APP_SEND_OP_COND         | For only SDC. Initiate initialization process.      |
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
- * | CMD8   | *3                     | R7  | No  | SEND_IF_COND             | For only SDC V2. Check voltage range                |
+ * | CMD8   | *3                     | R7  | No  | SEND_IF_COND             | For only SDC V2. Check voltage range and            |
+ * |        |                        |     |     |                          |Reviving CMD8 enables to expansion of new            |
+ * |        |                        |     |     |                          |functionality to some existing commands by redefining|
+ * |        |                        |     |     |                          |previously reserved bits. ACMD41 was expanded to     |
+ * |        |                        |     |     |                          |support the initialization of the SDHC Card and the  |
+ * |        |                        |     |     |                          |expansion is also applied to the SDXC Card.          |
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
  * | CMD9   | None(0)                | R1  | Yes | SEND_CSD                 | Read CSD register                                   |
  * +--------+------------------------+-----+-----+--------------------------+-----------------------------------------------------+
@@ -87,9 +94,17 @@ typedef struct {
 #define SD_EXIT_IDLE_TIMEOUTE              100
 #define SD_BUSY_TIMEOUTE                   200
 #define SD_WAITE_RESPONSE_IN_BYTES         8
-
+#define SD_WAITE_DATA_TOKEN_BYTES          100
 
 #define SD_R1_MASK                         0x7F
+
+#define SD_DATA_PACKET_CRC_SIZE            2
+
+/*
+ * Data token
+ */
+#define SD_SPI_DATA_TOKEN_17_18_24        254
+#define SD_SPI_ERROR_TOKEN                31
 
 /*
  * R1 response Idle state
@@ -150,6 +165,19 @@ typedef struct {
 #define SD_R1_PARAMETER_ERROR              (SD_R1_PARAMETER_ERROR_MASK << SD_R1_PARAMETER_ERROR_POS)
 
 /*
+ * R7 response VHS
+ */
+#define SD_R7_VHS_POS                      8
+#define SD_R7_VHS_MASK                     1
+#define SD_R7_VHS                          (SD_R7_VHS_MASK << SD_R7_VHS_POS)
+
+/*
+ * R7 response template
+ */
+#define SD_R7_TEMPLATE_POS                 0
+#define SD_R7_TEMPLATE_MASK                0xFF
+
+/*
  * CMD8 request VHS
  */
 #define SD_CMD8_VHS_POS                    8
@@ -178,19 +206,6 @@ typedef struct {
 #define SD_CMD41_PATTERN_MASK              0xFF
 #define SD_CMD41_PATTERN                   (SD_CMD41_PATTERN_MASK << SD_CMD41_PATTERN_POS)
 #define SD_CMD41_PATTERN_VALUE             0xAA
-
-/*
- * R7 reply VHS
- */
-#define SD_R7_VHS_POS                      8
-#define SD_R7_VHS_MASK                     1
-#define SD_R7_VHS                          (SD_R7_VHS_MASK << SD_R7_VHS_POS)
-
-/*
- * R7 reply template
- */
-#define SD_R7_TEMPLATE_POS                 0
-#define SD_R7_TEMPLATE_MASK                0xFF
 
 /*
  * OCR bit 2.7-2.8 volts

@@ -57,7 +57,7 @@ static uint8_t crc7(uint8_t message[], uint32_t messageSize)
     return (crc >> 1) & 0b1111111;
 }
 
-static SdioSpiIntStatus sdSpiSerializeReq(uint8_t *buffer, SdSpiCmdReq request)
+static SdSpiIntStatus sdSpiSerializeReq(uint8_t *buffer, SdSpiCmdReq request)
 {
     unsigned int argPos= FIELD_OFFSET(ReqLayout, argument);
 
@@ -122,11 +122,22 @@ static SdioSpiIntStatus sdSpiSerializeReq(uint8_t *buffer, SdSpiCmdReq request)
         return SD_SPI_UNSUPORTED_COMMAND_ERR_INT_STATUS;
     }
 
+    /*
+     * The 2 MSB must be 0b01, for example in case of the CMD41, the byte with command
+     * index will be:
+     *     0b01     Command index
+     * 0b   01          101001
+     */
     buffer[FIELD_OFFSET(ReqLayout, cmd)] = (request.cmd ) | (0x1 << 6);
+
+    /*
+     * Th 0 bit at the CRC byte must be 1
+     */
     buffer[FIELD_OFFSET(ReqLayout, crc)] = (crc7(buffer, 5) << 1) | 0x1;
 
     return SD_SPI_OK_INT_STATUS;
 }
+
 static SdSpiResult sdSpiDeserializeResp(uint8_t *buffer, SdSpiCmdResp *response, SdRespType respType)
 
 {
@@ -140,15 +151,27 @@ static SdSpiResult sdSpiDeserializeResp(uint8_t *buffer, SdSpiCmdResp *response,
                    SD_R1_ILIGAL_COMMAND | SD_R1_IDLE_STATE | SD_R1_PARAMETER_ERROR;
 
     switch (respType) {
-    case SD_RESPONSE_TYPE_R3:
+    case SD_RESPONSE_TYPE_R3: //this respons type transmite the OCR content
+
+        /*
+         * Decode SD card capacity type
+         */
         response->R3.cardCapacityStatys =
             BIT_MASK(buffer[respPos], SD_OCR_CCS_POS, SD_OCR_CCS_MASK) == 0
             ? OCR_CARD_CAPACITY_STATUS_SDSC
             : OCR_CARD_CAPACITY_STATUS_SDHC_SDXC;
+
+        /*
+         * Decode switching to voltage
+         */
         response->R3.switchingTo18V =
             BIT_MASK(buffer[respPos], SD_OCR_S18A_POS, SD_OCR_S18A_MASK) == 1;
         response->R3.cardPowerUp =
             BIT_MASK(buffer[respPos], SD_OCR_POWER_UP_POS, SD_OCR_POWER_UP_MASK) == 1;
+
+        /*
+         * Decode voltage
+         */
         if (BIT_MASK(buffer[respPos], SD_OCR_v_27_28_POS, SD_OCR_v_27_28_MASK) == 1) {
             response->R3.vddVoltage = OCR_VDD_VOLTAGE_27_28;
         } else if (BIT_MASK(buffer[respPos], SD_OCR_v_28_29_POS, SD_OCR_v_28_29_MASK) == 1) {
@@ -214,7 +237,7 @@ static SdSpiResult sdSpiWaiteBusy(SdSpiH *handler)
 {
     uint8_t buff = 0x00;
     uint32_t startTime = handler->cb.sdSpiGetTimeMs();
-    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
+    SdSpiInternalTrace *intTrace = (SdSpiInternalTrace *)handler->serviceBuff;
 
     while (handler->cb.sdSpiGetTimeMs() - startTime > SD_BUSY_TIMEOUTE) {
         if (handler->cb.sdSpiReceive(&buff, 1) == false) {
@@ -240,9 +263,10 @@ static SdSpiResult sdSpiWaiteBusy(SdSpiH *handler)
  */
 static SdSpiResult sdSpiCmdTransaction(SdSpiH *handler, SdSpiCmdReq request, SdSpiCmdResp *response)
 {
+    SdSpiResult result = SD_SPI_RESULT_OK;
     uint8_t reqBuff[sizeof(ReqLayout)];
     uint32_t rxCnt;
-    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
+    SdSpiInternalTrace *intTrace = (SdSpiInternalTrace *)handler->serviceBuff;
 
     /*
      * Serialize request
@@ -328,9 +352,11 @@ static SdSpiResult sdSpiCmdTransaction(SdSpiH *handler, SdSpiCmdReq request, SdS
      * In case of R1b response type, we still need to waite to non zero value from the line
      * before complete using the card
      */
-    return (respType == SD_RESPONSE_TYPE_R1B)
-           ? sdSpiWaiteBusy(handler)
-           : SD_SPI_RESULT_OK;
+    if (respType == SD_RESPONSE_TYPE_R1B) {
+        result = sdSpiWaiteBusy(handler);
+    }
+
+    return result;
 }
 
 static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
@@ -339,7 +365,7 @@ static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
     SdSpiCmdResp response;
     uint32_t startTime = handler->cb.sdSpiGetTimeMs();
     SdSpiResult result = SD_SPI_RESULT_OK;
-    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
+    SdSpiInternalTrace *intTrace = (SdSpiInternalTrace *)handler->serviceBuff;
 
     while (handler->cb.sdSpiGetTimeMs() - startTime < SD_EXIT_IDLE_TIMEOUTE) {
         /*
@@ -372,7 +398,7 @@ static SdSpiResult sdSpiCardRun(SdSpiH *handler, SdCardVersion sdVersion)
         if (result != SD_SPI_RESULT_OK) {
             break;
         }
-        if (response.r1 == 0x00) {
+        if (response.r1 == 0) {
             break;
         }
         if (response.r1 != SD_R1_IDLE_STATE) {
@@ -393,7 +419,7 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
     SdSpiCmdResp response;
     uint8_t transactionBuff[SD_SPI_TRANSACTION_BUFF_SIZE];
     bool initComplete = false;
-    SdioSpiInternalTrace *intTrace = (SdioSpiInternalTrace *)handler->serviceBuff;
+    SdSpiInternalTrace *intTrace = (SdSpiInternalTrace *)handler->serviceBuff;
 
     if (handler == NULL) {
         return SD_SPI_RESULT_HANDLER_NULL_ERROR;
@@ -421,10 +447,11 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
         return SD_SPI_RESULT_GET_TIME_CB_NULL_ERROR;
     }
     handler->cb = *cb;
+    handler->lba = 1;
 
     uint32_t serviceBuffSize = 0;
 #ifdef ENABLE_ERROR_TRACE
-    serviceBuffSize += sizeof(SdioSpiInternalTrace);
+    serviceBuffSize += sizeof(SdSpiInternalTrace);
 #endif
     if (handler->cb.sdSpiMalloc(serviceBuffSize) == NULL) {
         return SD_SPI_RESULT_MALLOC_CB_RERTURN_NULL_ERROR;
@@ -471,6 +498,9 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
         return SD_SPI_SET_IDLE_ERR_INT_STATUS;
     }
 
+    /*
+     * Try begin initialisation of the SDHC and SDXC card by issue the CMD8
+     */
     request.cmd = SD_CMD8;
     request.cmd8.vhs = true;
     result = sdSpiCmdTransaction(handler, request, &response);
@@ -479,7 +509,7 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
         && response.R7.voltageAccepted == true) {
 
         /*
-         * The card is SD Ver.2+
+         * The card is SD Ver.2+ (SDHC or SDXC)
          */
         if (sdSpiCardRun(handler, SD_CARD_VERSION_SD_VER_2_PLUS) == SD_SPI_RESULT_OK) {
 
@@ -496,10 +526,10 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
                 if (response.R3.cardCapacityStatys == OCR_CARD_CAPACITY_STATUS_SDSC) {
 
                     /*
-                    * Set block length equal to 512
+                    * Set block length equal to SDIO_SPI_FAT_LBA (512 byte)
                     */
                     request.cmd = SD_CMD16;
-                    request.cmd16.blockLength = 512;
+                    request.cmd16.blockLength = SDIO_SPI_FAT_LBA;
                     result = sdSpiCmdTransaction(handler, request, &response);
                     if (result == SD_SPI_RESULT_OK && response.r1 != 0)
                     {
@@ -509,6 +539,8 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
                         intTrace->intStatus = SD_SPI_SET_BLOCK_SIZE_ERR_INT_STATUS;
                         result = SD_SPI_RESULT_INTERNAL_ERROR;
                     }
+                } else {
+                    handler->lba = SDIO_SPI_FAT_LBA;
                 }
             } else {
                 /*
@@ -570,13 +602,62 @@ SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb)
                 }
             }
         }
+    } else {
+        result = SD_SPI_RESULT_UNKNOWN_ERROR;
     }
 
     return result;
 }
 
-SdSpiResult sdSpiReceive(SdSpiH *handler, uint8_t *data, size_t dataLength)
+static SdSpiIntStatus sdSpiReadCard(SdSpiH *handler, uint8_t *data)
 {
+    SdSpiIntStatus result = SD_SPI_OK_INT_STATUS;
+    uint32_t k = 0;
+    uint8_t dataToken;
+    uint8_t crc[SD_DATA_PACKET_CRC_SIZE];
+
+    /*
+     * Waite while the SD card start transmit data
+     */
+    while (k < SD_WAITE_DATA_TOKEN_BYTES) {
+        handler->cb.sdSpiReceive(&dataToken, sizeof(dataToken));
+        if (dataToken == SD_SPI_DATA_TOKEN_17_18_24) {
+            /*
+             * Successfully found the Data token
+             */
+            break;
+        } else if ((dataToken >> 5 & 7) == 0) {
+            /*
+             * Receive the Error token
+             */
+            result = SD_SPI_RESULT_RECEIVE_ERROR;
+            break;
+        }
+    }
+
+    if (result != SD_SPI_OK_INT_STATUS) {
+        return result;
+    }
+
+    /*
+     * Receive data;
+     */
+    handler->cb.sdSpiReceive(data, SDIO_SPI_FAT_LBA);
+
+    /*
+     * Receive CRC. We don't test CRC, but need receive it
+     */
+    handler->cb.sdSpiReceive(crc, sizeof(crc));
+
+    return result;
+}
+
+SdSpiResult sdSpiReceive(SdSpiH *handler, uint32_t address, uint8_t *data, size_t dataLength)
+{
+    SdSpiResult result = SD_SPI_OK_INT_STATUS;
+    SdSpiCmdReq request;
+    SdSpiCmdResp response;
+
     if (handler == NULL) {
         return SD_SPI_RESULT_HANDLER_NULL_ERROR;
     }
@@ -589,5 +670,37 @@ SdSpiResult sdSpiReceive(SdSpiH *handler, uint8_t *data, size_t dataLength)
         return SD_SPI_RESULT_DATA_LENGTH_ZERO_ERROR;
     }
 
-    
+    if (address % SDIO_SPI_FAT_LBA != 0) {
+        return SD_SPI_RESULT_ADDRESS_NOT_MULTIPLE_ERROR;
+    }
+
+    request.cmd = (dataLength == SDIO_SPI_FAT_LBA) ? SD_CMD17 : SD_CMD18;
+    request.cmd17.address = address / handler->lba;
+    result = sdSpiCmdTransaction(handler, request, &response);
+    if (result != SD_SPI_RESULT_OK) {
+        return result;
+    } else if (response.r1 != 0) {
+        return SD_SPI_RESULT_RESPONSE_ERROR;
+    }
+
+    /*
+     * Receive card. The LBA is equal to the SDIO_SPI_FAT_LBA (512 bytes)
+     */
+    for (uint32_t k = 0; k < dataLength / SDIO_SPI_FAT_LBA; k++, data += SDIO_SPI_FAT_LBA) {
+        result = sdSpiReadCard(handler, data);
+        if (result != SD_SPI_OK_INT_STATUS) {
+            break;
+        }
+    }
+
+    /*
+     * If read more than one LBA, send STOP command
+     * to stop data transacrion from the card
+     */
+    if (dataLength > SDIO_SPI_FAT_LBA) {
+        request.cmd = SD_CMD12;
+        result = sdSpiCmdTransaction(handler, request, &response);
+    }
+
+    return result;
 }

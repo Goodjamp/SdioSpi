@@ -25,6 +25,11 @@ typedef enum {
     SD_SPI_RESULT_DATA_NULL_ERROR,
     SD_SPI_RESULT_DATA_LENGTH_ZERO_ERROR,
     SD_SPI_RESULT_NOT_INIT_ERROR,
+    SD_SPI_RESULT_INIT_READ_ERROR,
+    SD_SPI_RESULT_RESPONSE_ERROR,
+    SD_SPI_RESULT_ADDRESS_NOT_MULTIPLE_ERROR,
+    SD_SPI_RESULT_RECEIVE_ERROR,
+    SD_SPI_RESULT_UNKNOWN_ERROR,
 } SdSpiResult;
 
 typedef enum {
@@ -34,9 +39,9 @@ typedef enum {
 } SdCardVersion;
 
 typedef enum {
-    SD_CARD_CAPCITY_STANDART,
-    SD_CARD_CAPCITY_HIGHT,    // SDHC
-    SD_CARD_CAPCITY_EXTENDED, // SDХC
+    SD_CARD_CAPCITY_STANDART, // SD   standart Capacity
+    SD_CARD_CAPCITY_HIGHT,    // SDHC hight capacity
+    SD_CARD_CAPCITY_EXTENDED, // SDXC eXtended capacity (UHS-I and UHS-II )
 } SdCardCapacity;
 
 typedef struct {
@@ -58,6 +63,11 @@ typedef struct {
     SdSpiMetaInformation metaInformation;
 
     /*
+     * the information aboit LBA (1 byte / 512 bytes)
+     */
+    bool lba;
+
+    /*
      * The serviceBuff is used to save the internal errors.
      * Also this buffer could be used as a traceBuffer
      */
@@ -69,8 +79,8 @@ typedef struct {
 SdSpiResult sdSpiInit(SdSpiH *handler, const SdSpiCb *cb);
 SdSpiResult sdSpiGetMetaInformation(SdSpiH *handler, SdSpiMetaInformation metaInformation );
 SdSpiResult sdSpiGetInternalError(SdSpiH *handler);
-SdSpiResult sdSpiReceive(SdSpiH *handler, uint8_t *data, size_t dataLength);
-SdSpiResult sdSpiWrite(SdSpiH *handler, uint8_t *data, size_t dataLength);
+SdSpiResult sdSpiReceive(SdSpiH *handler, uint32_t address, uint8_t *data, size_t dataLength);
+SdSpiResult sdSpiWrite(SdSpiH *handler, uint32_t address, uint8_t *data, size_t dataLength);
 
 
 #endif
