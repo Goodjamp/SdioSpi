@@ -7,7 +7,9 @@
 
 typedef enum {
     SD_SPI_RESULT_OK,
+
     SD_SPI_RESULT_HANDLER_NULL_ERROR,
+
     SD_SPI_RESULT_CB_NULL_ERROR,
     SD_SPI_RESULT_SET_FRQ_CB_NULL_ERROR,
     SD_SPI_RESULT_SET_CS_CB_NULL_ERROR,
@@ -20,14 +22,31 @@ typedef enum {
     SD_SPI_RESULT_SEND_CB_RETURN_ERROR,
     SD_SPI_RESULT_RECEIVE_CB_RETURN_ERROR,
     SD_SPI_RESULT_MALLOC_CB_RERTURN_NULL_ERROR,
-    SD_SPI_RESULT_INTERNAL_ERROR,
-    SD_SPI_RESULT_NO_RESPONSE_ERROR,
     SD_SPI_RESULT_DATA_NULL_ERROR,
     SD_SPI_RESULT_DATA_LENGTH_ZERO_ERROR,
-    SD_SPI_RESULT_NOT_INIT_ERROR,
-    SD_SPI_RESULT_INIT_READ_ERROR,
+
+    SD_SPI_RESULT_INTERNAL_ERROR,
+    
+    /*
+     * Card don't reply
+     */
+    SD_SPI_RESULT_NO_RESPONSE_ERROR,
+    
+    /*
+     * The R1 response != 0
+     */
     SD_SPI_RESULT_RESPONSE_ERROR,
+
+    /*
+     * Receive the error token to the Read command
+     */
     SD_SPI_RESULT_RECEIVE_ERROR,
+
+    /*
+     * Receive the error to the Write command
+     */
+    SD_SPI_RESULT_WRITE_ERROR,
+
     SD_SPI_RESULT_UNKNOWN_ERROR,
 } SdSpiResult;
 

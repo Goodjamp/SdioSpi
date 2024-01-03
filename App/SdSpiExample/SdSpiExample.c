@@ -24,6 +24,8 @@ static SdSpiH sdSpiHandler;
     SEGGER_RTT_WriteString(0, logStr);    \
 }
 
+static const char writeData[] = "He was not the Model Boy of the village. He knew the model boy very well though—and loathed him. Within two minutes, or even less, he had forgotten all his troubles. Not because his troubles were one whit less heavy and bitter to him than a man’s are to a man, but because a new and powerful interest bore them down and drove them out of his mind for the time—just as men’s misfortunes are forgotten in the excitement of new enterprises. This new interest was a valued novelty in whistling, which he had just acquired from a negro, and he was suffering to practise it undisturbed. It consisted in a peculiar bird-like turn, a sort of liquid warble, produced by touching the tongue to the roof of the mouth at short intervals in the midst of the music—the reader probably remembers how to do it, if he has ever been a boy. Diligence and attention soon gave him the knack of it, and he strode down the street with his mouth full of harmony and his soul full of gratitude. He felt much as an astronomer feels who has discovered a new planet—no doubt, as far as strong, deep, unalloyed pleasure is concerned, the advantage was with the boy, not the astronomer.The summer evenings were long. It was not dark, yet. Presently Tom checked his whistle. A stranger was before him—a boy a shade larger than himself. A new-comer of any age or either sex was an impressive curiosity in the poor little shabby village of St. Petersburg. This boy was well dressed, too—well dressed on a week-day. This was simply astounding. His cap was a dainty thing, his close-buttoned blue cloth roundabout was new and natty, and so were his pantaloons. He had shoes on—and it was only Friday. He even wore a necktie, a bright bit of ribbon. He had a citified air about him that ate into Tom’s vitals. The more Tom stared at the splendid marvel, the higher he turned up his nose at his finery and the shabbier and shabbier his own outfit seemed to him to grow. Neither boy spoke. If one moved, the other moved—but only sidewise, in a circle; they kept face to face and eye to eye all the time. Finally Tom said:";
+
 /*
  *------------------------  SPI CB   ------------------------
  */
@@ -158,7 +160,7 @@ void  sdSpiExampleRun(void)
     sdSpiInitilisation();
 
     /*
-     * Test receive 512 bytes
+     * Test receive 1 LBA (512 bytes)
      */
     memset(sdCardData, 0, sizeof(sdCardData));
     result = sdSpiRead(&sdSpiHandler, (uint32_t )0, sdCardData, 1);
@@ -170,10 +172,12 @@ void  sdSpiExampleRun(void)
     }
 
     /*
-     * Test receive 8192 bytes
+     * Test receive multiple LBA by the 8192 LBA address (8192 * 512 abs address)
      */
     memset(sdCardData, 0, sizeof(sdCardData));
     result = sdSpiRead(&sdSpiHandler, (uint32_t )(8192), sdCardData, 32);
     PRINT_LOG("Sd receive 2048 bytes result: %u\n", result);
+
+    sdSpiWrite(&sdSpiHandler, 0, (uint8_t *)writeData, 2);
 
 }

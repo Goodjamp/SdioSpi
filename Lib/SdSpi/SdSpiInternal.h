@@ -9,7 +9,7 @@
 #define ENABLE_ERROR_TRACE
 
 #define SDIO_SPI_FAT_LBA              512
-#define SD_SPI_WAITE_STABILE_POWER    3
+#define SD_SPI_WAITE_STABILE_POWER    2
 
 typedef enum {
     SD_SPI_OK_INT_STATUS,
@@ -104,8 +104,20 @@ typedef struct {
 /*
  * Data token
  */
-#define SD_SPI_DATA_TOKEN_17_18_24        254
-#define SD_SPI_ERROR_TOKEN                31
+#define TOKEN_SIZE                    1
+#define SD_TOKEN_DATA_17_18_24        254
+#define SD_TOKEN_DATA_25              252
+#define SD_TOKEN_STOP_TRAN            253
+/*
+ * Returned on the head of the data packet in case of any error
+ * of the read operation
+ */
+#define SD_SPI_TOKEN_ERROR                31
+
+#define SD_WRITE_DATA_RESPONSE_MASK            31
+#define SD_WRITE_DATA_RESPONSE_ACCEPTED        5
+#define SD_WRITE_DATA_RESPONSE_CRC_ERROR       11
+#define SD_WRITE_DATA_RESPONSE_WRIRTE_ERROR    13
 
 /*
  * R1 response Idle state
@@ -303,12 +315,12 @@ typedef struct {
     uint8_t cmd;
     uint32_t argument;
     uint8_t crc;
-} ReqLayout;
+} SdReqLayout;
 
 typedef struct {
     uint8_t r1;
     uint32_t resp;
-} RespLayout;
+} SdRespLayout;
 #pragma pack(pop)
 
 typedef enum {
@@ -338,32 +350,32 @@ typedef enum {
 } SdSpiCmd;
 
 typedef enum {
-    OCR_VDD_VOLTAGE_27_28,
-    OCR_VDD_VOLTAGE_28_29,
-    OCR_VDD_VOLTAGE_29_30,
-    OCR_VDD_VOLTAGE_30_31,
-    OCR_VDD_VOLTAGE_31_32,
-    OCR_VDD_VOLTAGE_32_33,
-    OCR_VDD_VOLTAGE_33_34,
-    OCR_VDD_VOLTAGE_34_35,
-    OCR_VDD_VOLTAGE_35_36,
-} OcrVddVoltage;
+    SD_OCR_VDD_VOLTAGE_27_28,
+    SD_OCR_VDD_VOLTAGE_28_29,
+    SD_OCR_VDD_VOLTAGE_29_30,
+    SD_OCR_VDD_VOLTAGE_30_31,
+    SD_OCR_VDD_VOLTAGE_31_32,
+    SD_OCR_VDD_VOLTAGE_32_33,
+    SD_OCR_VDD_VOLTAGE_33_34,
+    SD_OCR_VDD_VOLTAGE_34_35,
+    SD_OCR_VDD_VOLTAGE_35_36,
+} SdOcrVddVoltage;
 
 typedef enum {
-    OCR_CARD_CAPACITY_STATUS_SDSC,         // The LBA set by the command CMD16
-    OCR_CARD_CAPACITY_STATUS_SDHC_SDXC,    // The LBA has fixed size 512 byte
-} OcrCardCapacityStatys;
+    SD_OCR_CARD_CAPACITY_STATUS_SDSC,         // The LBA set by the command CMD16
+    SD_OCR_CARD_CAPACITY_STATUS_SDHC_SDXC,    // The LBA has fixed size 512 byte
+} SdOcrCardCapacityStatys;
 
 typedef enum {
-    HCS_SDSC,        // The LBA set by the command CMD16
-    HCS_SDHC_SDXC,    // The LBA has fixed size 512 byte
-} Hcs;
+    SD_HCS_SDSC,         // The LBA set by the command CMD16
+    SD_HCS_SDHC_SDXC,    // The LBA has fixed size 512 byte
+} SdHcs;
 
 typedef struct {
     SdSpiCmd cmd;
     union {
         struct {
-            Hcs hcs;
+            SdHcs hcs;
         } cmd41;
         struct {
             bool vhs;
@@ -408,8 +420,8 @@ typedef struct {
          * The next struct represent R3 response without R1 bits
          */
         struct {
-            OcrVddVoltage vddVoltage;
-            OcrCardCapacityStatys cardCapacityStatys;
+            SdOcrVddVoltage vddVoltage;
+            SdOcrCardCapacityStatys cardCapacityStatys;
             bool switchingTo18V;
             bool cardPowerUp;
         } R3;

@@ -93,13 +93,27 @@ set (RTT_PATH
     Middlewares/Third_Party/RTT/Syscalls
 )
 
+set (FAT_SRC
+    Middlewares/FAT/source/diskio.c
+    Middlewares/FAT/source/diskio.h
+    Middlewares/FAT/source/ff.c
+    Middlewares/FAT/source/ff.h
+    Middlewares/FAT/source/ffconf.h
+    Middlewares/FAT/source/ffsystem.c
+    Middlewares/FAT/source/ffunicode.c
+)
+
+set (FAT_PATH
+    Middlewares/FAT/source
+)
+
 add_definitions(
     -DUSE_FULL_LL_DRIVER
     -DSTM32F411xE
 
     -DCSFR_MAX_PACKET_SIZE=${CSFR_MAX_PACKET_SIZE}
 )
-include_directories(${APP_PATH} ${BSP_PATH} ${GENERYC_PATH} ${RTT_PATH})
+include_directories(${APP_PATH} ${BSP_PATH} ${GENERYC_PATH} ${RTT_PATH} ${FAT_PATH})
 
 set(COMPILER_GENERAL_FLAGS "-mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -fno-common")
 set(COMPILER_USER_FLAGS    "-g3 -Wall -Wno-multichar -fdata-sections -ffunction-sections -fno-strict-aliasing -ffreestanding -fno-builtin -fno-common")
@@ -139,7 +153,7 @@ message(STATUS, "CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
 message(STATUS, "C_FLAGS: ${CMAKE_C_FLAGS}")
 
 # Add target #1 ${CMAKE_PROJECT_NAME}.elf = RcNetwork.elf
-add_executable(${TargetMcuImageElf} ${APP_SRC} ${BSP_SRC} ${GENERYC_SRC} ${RTT_SRC})
+add_executable(${TargetMcuImageElf} ${APP_SRC} ${BSP_SRC} ${GENERYC_SRC} ${RTT_SRC} ${FAT_SRC})
 
 set(McuImageHex ${CMAKE_PROJECT_NAME}.hex)
 
