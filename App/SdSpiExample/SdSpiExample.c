@@ -14,8 +14,10 @@
 #include "SdSpi.h"
 #include "DebugServices.h"
 
-static bool txComplete;
-static bool rxComplete;
+#include "SdSpiInternal.h"
+
+static volatile bool txComplete;
+static volatile bool rxComplete;
 static SdSpiH sdSpiHandler;
 
 #define PRINT_LOG(FORMAT, ...)    {       \
@@ -36,9 +38,7 @@ static void spiRxCompleteCb(SpiResult result)
 
 static void spiTxCompleteCb(SpiResult result)
 {
-    debugServicesPinSet(DebugPin2);
     txComplete = true;
-    debugServicesPinClear(DebugPin2);
 }
 
 /*
@@ -51,12 +51,10 @@ static bool sdSpiSendCb(uint8_t *data, size_t dataLength)
         return true;
     }
 
-    debugServicesPinSet(DebugPin1);
     txComplete = false;
     spiTx(SPI_ETH, data, dataLength);
     while (txComplete == false){}
 
-    debugServicesPinClear(DebugPin1);
     return true;
 }
 
@@ -66,12 +64,9 @@ static bool sdSpiReceiveCb(uint8_t *data, size_t dataLength)
         return true;
     }
 
-    debugServicesPinSet(DebugPin3);
     rxComplete = false;
     spiRx(SPI_ETH, data, dataLength);
     while (rxComplete == false){}
-
-    debugServicesPinClear(DebugPin3);
 
     return true;
 }
@@ -154,10 +149,18 @@ static void sdSpiInitilisation(void)
 
 #define RX_DATA_SIZE    (512 * 32)
 uint8_t sdCardData[RX_DATA_SIZE];
+uint8_t csdReg[SD_SPI_CSD_BYTES];
+uint8_t cidReg[SD_SPI_CID_BYTES];
+
 void  sdSpiExampleRun(void)
 {
     SdSpiResult result;
+    SdSpiMetaInformation metaInformation;
+
     sdSpiInitilisation();
+
+    sdSpiGetMetaInformation(&sdSpiHandler, &metaInformation);
+    PRINT_LOG("Sd capacity: %u\n", (unsigned int)metaInformation.capcityMb);
 
     /*
      * Test receive 1 LBA (512 bytes)
@@ -178,6 +181,48 @@ void  sdSpiExampleRun(void)
     result = sdSpiRead(&sdSpiHandler, (uint32_t )(8192), sdCardData, 32);
     PRINT_LOG("Sd receive 2048 bytes result: %u\n", result);
 
-    sdSpiWrite(&sdSpiHandler, 0, (uint8_t *)writeData, 2);
 
+
+
+
+    /*
+     * Test send 2 LBA by the 0 LBA address
+     */
+    result = sdSpiWrite(&sdSpiHandler, 0, (uint8_t *)&writeData[512 * 2], 2);
+    PRINT_LOG("Sd Write 512*2 bytes result: %u\n", result);
+
+    /*
+     * Test receive 2 LBA (512 bytes)
+     */
+    memset(sdCardData, 0, sizeof(sdCardData));
+    result = sdSpiRead(&sdSpiHandler, (uint32_t )0, sdCardData, 2);
+    PRINT_LOG("Sd receive 512 bytes result: %u\n", result);
+
+    if (memcmp(sdCardData, &writeData[512 * 2], 2 * 512) == 0) {
+        PRINT_LOG("Sd write/read Ok%c\n", ' ');
+    } else {
+        PRINT_LOG("Sd write/read ERROR%c\n", ' ');
+    }
+
+
+
+
+    /*
+     * Test send 2 LBA by the 0 LBA address
+     */
+    result = sdSpiWrite(&sdSpiHandler, 0, (uint8_t *)&writeData[0], 2);
+    PRINT_LOG("Sd Write 512*2 bytes result: %u\n", result);
+
+    /*
+     * Test receive 2 LBA (512 bytes)
+     */
+    memset(sdCardData, 0, sizeof(sdCardData));
+    result = sdSpiRead(&sdSpiHandler, (uint32_t )0, sdCardData, 2);
+    PRINT_LOG("Sd receive 512 bytes result: %u\n", result);
+
+    if (memcmp(sdCardData, &writeData[0], 2 * 512) == 0) {
+        PRINT_LOG("Sd write/read Ok%c\n", ' ');
+    } else {
+        PRINT_LOG("Sd write/read ERROR%c\n", ' ');
+    }
 }

@@ -8,6 +8,7 @@
         "stm32f4xx_it.h": "c",
         "stdint.h": "c",
         "debugservices.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "sdspiinternal.h": "c"
     }
 }

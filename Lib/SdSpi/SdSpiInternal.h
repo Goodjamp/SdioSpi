@@ -8,9 +8,6 @@
 
 #define ENABLE_ERROR_TRACE
 
-#define SDIO_SPI_FAT_LBA              512
-#define SD_SPI_WAITE_STABILE_POWER    2
-
 typedef enum {
     SD_SPI_OK_INT_STATUS,
     SD_SPI_UNSUPORTED_COMMAND_ERR_INT_STATUS,
@@ -90,29 +87,32 @@ typedef struct {
 
  */
 
-#define SD_SPI_INITIAL_FRQ                 100000
-#define SD_SPI_FAST_FRQ                    20000000
-#define SD_EXIT_IDLE_TIMEOUTE              100
-#define SD_BUSY_TIMEOUTE                   200
-#define SD_WAITE_RESPONSE_IN_BYTES         8
-#define SD_WAITE_DATA_TOKEN_BYTES          100
+#define SDIO_SPI_FAT_LBA                       512
+#define SD_SPI_WAITE_STABILE_POWER             2
 
-#define SD_R1_MASK                         0x7F
+#define SD_SPI_INITIAL_FRQ                     100000
+#define SD_SPI_FAST_FRQ                        20000000
+#define SD_EXIT_IDLE_TIMEOUTE                  100
+#define SD_BUSY_TIMEOUTE                       200
+#define SD_WAITE_RESPONSE_IN_BYTES             8
+#define SD_WAITE_DATA_TOKEN_BYTES              1000
 
-#define SD_DATA_PACKET_CRC_SIZE            2
+#define SD_R1_MASK                             0x7F
+
+#define SD_DATA_PACKET_CRC_SIZE                2
 
 /*
  * Data token
  */
-#define TOKEN_SIZE                    1
-#define SD_TOKEN_DATA_17_18_24        254
-#define SD_TOKEN_DATA_25              252
-#define SD_TOKEN_STOP_TRAN            253
+#define TOKEN_SIZE                             1
+#define SD_TOKEN_DATA_17_18_24                 254
+#define SD_TOKEN_DATA_25                       252
+#define SD_TOKEN_STOP_TRAN                     253
 /*
  * Returned on the head of the data packet in case of any error
  * of the read operation
  */
-#define SD_SPI_TOKEN_ERROR                31
+#define SD_SPI_TOKEN_ERROR                     31
 
 #define SD_WRITE_DATA_RESPONSE_MASK            31
 #define SD_WRITE_DATA_RESPONSE_ACCEPTED        5
@@ -122,175 +122,175 @@ typedef struct {
 /*
  * R1 response Idle state
  */
-#define SD_R1_IDLE_STATE_POS               0
-#define SD_R1_IDLE_STATE_MASK              1
-#define SD_R1_IDLE_STATE                   (SD_R1_IDLE_STATE_MASK << SD_R1_IDLE_STATE_POS)
+#define SD_R1_IDLE_STATE_POS                   0
+#define SD_R1_IDLE_STATE_MASK                  1
+#define SD_R1_IDLE_STATE                       (SD_R1_IDLE_STATE_MASK << SD_R1_IDLE_STATE_POS)
 
 /*
  * R1 response Erase reset
  */
-#define SD_R1_ERASE_RESET_POS              1
-#define SD_R1_ERASE_RESET_MASK             1
-#define SD_R1_ERASE_RESET                    (SD_R1_ERASE_RESET_MASK << SD_R1_ERASE_RESET_POS)
+#define SD_R1_ERASE_RESET_POS                  1
+#define SD_R1_ERASE_RESET_MASK                 1
+#define SD_R1_ERASE_RESET                      (SD_R1_ERASE_RESET_MASK << SD_R1_ERASE_RESET_POS)
 
 /*
  * R1 response Iligal command
  */
-#define SD_R1_ILIGAL_COMMAND_POS           2
-#define SD_R1_ILIGAL_COMMAND_MASK          1
-#define SD_R1_ILIGAL_COMMAND               (SD_R1_ILIGAL_COMMAND_MASK << SD_R1_ILIGAL_COMMAND_POS)
+#define SD_R1_ILIGAL_COMMAND_POS               2
+#define SD_R1_ILIGAL_COMMAND_MASK              1
+#define SD_R1_ILIGAL_COMMAND                   (SD_R1_ILIGAL_COMMAND_MASK << SD_R1_ILIGAL_COMMAND_POS)
 
 /*
  * R1 response Command CRC error
  */
-#define SD_R1_COMMAND_CRC_ERROR_POS        3
-#define SD_R1_COMMAND_CRC_ERROR_MASK       1
-#define SD_R1_COMMAND_CRC_ERROR            (SD_R1_COMMAND_CRC_ERROR_MASK \
-                                            << SD_R1_COMMAND_CRC_ERROR_POS)
+#define SD_R1_COMMAND_CRC_ERROR_POS            3
+#define SD_R1_COMMAND_CRC_ERROR_MASK           1
+#define SD_R1_COMMAND_CRC_ERROR                (SD_R1_COMMAND_CRC_ERROR_MASK \
+                                                << SD_R1_COMMAND_CRC_ERROR_POS)
 
 /*
  * R1 response Erace sequense error
  */
-#define SD_R1_ERASE_SEQUENSE_ERROR_POS     4
-#define SD_R1_ERASE_SEQUENSE_ERROR_MASK    1
-#define SD_R1_ERASE_SEQUENSE_ERROR         (SD_R1_ERASE_SEQUENSE_ERROR_MASK \
-                                            << SD_R1_ERASE_SEQUENSE_ERROR_POS)
+#define SD_R1_ERASE_SEQUENSE_ERROR_POS         4
+#define SD_R1_ERASE_SEQUENSE_ERROR_MASK        1
+#define SD_R1_ERASE_SEQUENSE_ERROR             (SD_R1_ERASE_SEQUENSE_ERROR_MASK \
+                                                << SD_R1_ERASE_SEQUENSE_ERROR_POS)
 
 /*
  * R1 response Address error
  */
-#define SD_R1_ADDRESS_ERROR_POS            5
-#define SD_R1_ADDRESS_ERROR_MASK           1
-#define SD_R1_ADDRESS_ERROR                (SD_R1_ADDRESS_ERROR_MASK << SD_R1_ADDRESS_ERROR_POS)
+#define SD_R1_ADDRESS_ERROR_POS                5
+#define SD_R1_ADDRESS_ERROR_MASK               1
+#define SD_R1_ADDRESS_ERROR                    (SD_R1_ADDRESS_ERROR_MASK << SD_R1_ADDRESS_ERROR_POS)
 
 /*
  * R1 response Address error
  */
-#define SD_R1_ADDRESS_ERROR_POS            5
-#define SD_R1_ADDRESS_ERROR_MASK           1
-#define SD_R1_ADDRESS_ERROR                (SD_R1_ADDRESS_ERROR_MASK << SD_R1_ADDRESS_ERROR_POS)
+#define SD_R1_ADDRESS_ERROR_POS                5
+#define SD_R1_ADDRESS_ERROR_MASK               1
+#define SD_R1_ADDRESS_ERROR                    (SD_R1_ADDRESS_ERROR_MASK << SD_R1_ADDRESS_ERROR_POS)
 
 /*
  * R1 response Parameter error
  */
-#define SD_R1_PARAMETER_ERROR_POS          6
-#define SD_R1_PARAMETER_ERROR_MASK         1
-#define SD_R1_PARAMETER_ERROR              (SD_R1_PARAMETER_ERROR_MASK << SD_R1_PARAMETER_ERROR_POS)
+#define SD_R1_PARAMETER_ERROR_POS              6
+#define SD_R1_PARAMETER_ERROR_MASK             1
+#define SD_R1_PARAMETER_ERROR                  (SD_R1_PARAMETER_ERROR_MASK << SD_R1_PARAMETER_ERROR_POS)
 
 /*
  * R7 response VHS
  */
-#define SD_R7_VHS_POS                      8
-#define SD_R7_VHS_MASK                     1
-#define SD_R7_VHS                          (SD_R7_VHS_MASK << SD_R7_VHS_POS)
+#define SD_R7_VHS_POS                          8
+#define SD_R7_VHS_MASK                         1
+#define SD_R7_VHS                              (SD_R7_VHS_MASK << SD_R7_VHS_POS)
 
 /*
  * R7 response template
  */
-#define SD_R7_TEMPLATE_POS                 0
-#define SD_R7_TEMPLATE_MASK                0xFF
+#define SD_R7_TEMPLATE_POS                     0
+#define SD_R7_TEMPLATE_MASK                    0xFF
 
 /*
  * CMD8 request VHS
  */
-#define SD_CMD8_VHS_POS                    8
-#define SD_CMD8_VHS_MASK                   1
-#define SD_CMD8_VHS                        (SD_CMD8_VHS_MASK << SD_CMD8_VHS_POS)
+#define SD_CMD8_VHS_POS                        8
+#define SD_CMD8_VHS_MASK                       1
+#define SD_CMD8_VHS                            (SD_CMD8_VHS_MASK << SD_CMD8_VHS_POS)
 
 /*
  * CMD8 pattern
  */
-#define SD_CMD8_PATTERN_POS               0
-#define SD_CMD8_PATTERN_MASK              0xFF
-#define SD_CMD8_PATTERN                   (SD_CMD8_PATTERN_MASK << SD_CMD8_PATTERN_POS)
-#define SD_CMD8_PATTERN_VALUE             0xAA
+#define SD_CMD8_PATTERN_POS                    0
+#define SD_CMD8_PATTERN_MASK                   0xFF
+#define SD_CMD8_PATTERN                        (SD_CMD8_PATTERN_MASK << SD_CMD8_PATTERN_POS)
+#define SD_CMD8_PATTERN_VALUE                  0xAA
 
 /*
  * CMD41 request HCS
  */
-#define SD_CMD41_HCS_POS                   30
-#define SD_CMD41_HCS_MASK                  1
-#define SD_CMD41_HCS                       (SD_CMD41_HCS_MASK << SD_CMD41_HCS_POS)
+#define SD_CMD41_HCS_POS                       30
+#define SD_CMD41_HCS_MASK                      1
+#define SD_CMD41_HCS                           (SD_CMD41_HCS_MASK << SD_CMD41_HCS_POS)
 
 /*
  * CMD41 pattern
  */
-#define SD_CMD41_PATTERN_POS               0
-#define SD_CMD41_PATTERN_MASK              0xFF
-#define SD_CMD41_PATTERN                   (SD_CMD41_PATTERN_MASK << SD_CMD41_PATTERN_POS)
-#define SD_CMD41_PATTERN_VALUE             0xAA
+#define SD_CMD41_PATTERN_POS                   0
+#define SD_CMD41_PATTERN_MASK                  0xFF
+#define SD_CMD41_PATTERN                       (SD_CMD41_PATTERN_MASK << SD_CMD41_PATTERN_POS)
+#define SD_CMD41_PATTERN_VALUE                 0xAA
 
 /*
  * OCR bit 2.7-2.8 volts
  */
-#define SD_OCR_v_27_28_POS                 15
-#define SD_OCR_v_27_28_MASK                1
+#define SD_OCR_v_27_28_POS                     15
+#define SD_OCR_v_27_28_MASK                    1
 
 /*
  * OCR bit 2.8-2.9 volts
  */
-#define SD_OCR_v_28_29_POS                 16
-#define SD_OCR_v_28_29_MASK                1
+#define SD_OCR_v_28_29_POS                     16
+#define SD_OCR_v_28_29_MASK                    1
 
 /*
  * OCR bit 2.9-30 volts
  */
-#define SD_OCR_v_29_30_POS                 17
-#define SD_OCR_v_29_30_MASK                1
+#define SD_OCR_v_29_30_POS                     17
+#define SD_OCR_v_29_30_MASK                    1
 
 /*
  * OCR bit 3.0-3.1 volts
  */
-#define SD_OCR_v_30_31_POS                 18
-#define SD_OCR_v_30_31_MASK                1
+#define SD_OCR_v_30_31_POS                     18
+#define SD_OCR_v_30_31_MASK                    1
 
 /*
  * OCR bit 3.1-3.2 volts
  */
-#define SD_OCR_v_31_32_POS                 19
-#define SD_OCR_v_31_32_MASK                1
+#define SD_OCR_v_31_32_POS                     19
+#define SD_OCR_v_31_32_MASK                    1
 
 /*
  * OCR bit 3.2-3.3 volts
  */
-#define SD_OCR_v_32_33_POS                 20
-#define SD_OCR_v_32_33_MASK                1
+#define SD_OCR_v_32_33_POS                     20
+#define SD_OCR_v_32_33_MASK                    1
 
 /*
  * OCR bit 3.3-3.4 volts
  */
-#define SD_OCR_v_33_34_POS                 21
-#define SD_OCR_v_33_34_MASK                1
+#define SD_OCR_v_33_34_POS                     21
+#define SD_OCR_v_33_34_MASK                    1
 
 /*
  * OCR bit 3.4-35 volts
  */
-#define SD_OCR_v_34_35_POS                 22
-#define SD_OCR_v_34_35_MASK                1
+#define SD_OCR_v_34_35_POS                     22
+#define SD_OCR_v_34_35_MASK                    1
 
 /*
  * OCR bit 3.5-3.6 volts
  */
-#define SD_OCR_v_35_36_POS                 23
-#define SD_OCR_v_35_36_MASK                1
+#define SD_OCR_v_35_36_POS                     23
+#define SD_OCR_v_35_36_MASK                    1
 
 /*
  * OCR bit switched to 1.8V Accepted
  */
-#define SD_OCR_S18A_POS                    24
-#define SD_OCR_S18A_MASK                   1
+#define SD_OCR_S18A_POS                        24
+#define SD_OCR_S18A_MASK                       1
 
 /*
  * OCR bit UHS-II Card status
  */
-#define SD_OCR_UHS_CS_POS                  29
-#define SD_OCR_UHS_CS_MASK                 1
+#define SD_OCR_UHS_CS_POS                      29
+#define SD_OCR_UHS_CS_MASK                     1
 
 /*
  * OCR bit Card capacity status
  */
-#define SD_OCR_CCS_POS                     30
-#define SD_OCR_CCS_MASK                    1
+#define SD_OCR_CCS_POS                         30
+#define SD_OCR_CCS_MASK                        1
 
 /*
  * OCR bit Card power up (busy)
@@ -300,15 +300,15 @@ typedef struct {
 
 
 
-#define SD_R1_RESP_SIZE                    1
-#define SD_R3_RESP_SIZE                    5
-#define SD_R7_RESP_SIZE                    5
+#define SD_R1_RESP_SIZE                        1
+#define SD_R3_RESP_SIZE                        5
+#define SD_R7_RESP_SIZE                        5
 
-#define COMMAND_VAL(COMMAND_ID)      ((01 << 6) |  COMMAND_ID)
-#define COMMAND_VAL(COMMAND_ID)      ((01 << 6) |  COMMAND_ID)
-#define BIT_MASK(VAL, POS, MASK)     (MASK & (VAL >> POS))
-#define FIELD_OFFSET(STR, F)         ((uint32_t)&(*((STR *)0)).F)
-#define FIELD_SIZE(STR, F)           sizeof(((STR *)0)->F)
+#define COMMAND_VAL(COMMAND_ID)                ((01 << 6) |  COMMAND_ID)
+#define COMMAND_VAL(COMMAND_ID)                ((01 << 6) |  COMMAND_ID)
+#define BIT_MASK(VAL, POS, MASK)               (MASK & (VAL >> POS))
+#define FIELD_OFFSET(STR, F)                   ((uint32_t)&(*((STR *)0)).F)
+#define FIELD_SIZE(STR, F)                     sizeof(((STR *)0)->F)
 
 #pragma pack(push, 1)
 typedef struct {
@@ -428,6 +428,62 @@ typedef struct {
     };
 } SdSpiCmdResp;
 
+#pragma pack(push, 1)
+typedef struct {
+    uint32_t one:1;
+    uint32_t crc:7;
+    uint32_t reserved2:2;
+    uint32_t fileFormat:2;
+    uint32_t tempWriteProtection:1;
+    uint32_t permWriteProtection:1;
+    uint32_t copyFlag:1;
+    uint32_t fileFormatGroupe:1;
+    uint32_t reserved3:5;
+    uint32_t partBlocksForWriteAllowed:1;
+    uint32_t maxWriteDataBlockLen:4;
+    uint32_t writeSpeedFactor:3;
+    uint32_t reserved4:2;
+    uint32_t writeProtectGroupEnable:1;
 
+    uint16_t writeProtectGroupSize:7;
+    uint16_t eraseSectorSize:7;
+    uint16_t eraseSingleBlockEnable:1;
+    uint16_t reserved5:1;
+
+    uint32_t deviceSize:22;
+    uint32_t reseved6:6;
+    uint32_t dsrImplemented:1;
+    uint32_t readBlockMisalignment:1;
+    uint32_t writeBlockMisalignment:1;
+    uint32_t partialBlockForReadAllowed:1;
+
+    uint32_t maxReadDataBlockLen:4;
+    uint32_t cardCommandClasses:12;
+    uint32_t maxDataTransferRate:8;
+    uint32_t dataReadAccesTimeInClk:8;
+
+    uint16_t dataReadAccesTime:8;
+    uint16_t reserved6:6;
+    uint16_t csdStruct:2;
+} SdSpiCsdV2;
+
+
+typedef struct {
+    uint8_t one:1;
+    uint8_t crc:7;
+
+    uint16_t ManufacturingDate:12;
+    uint16_t reserved1:4;
+
+    uint32_t serialNumber;
+    uint8_t revision;
+
+    uint8_t name[5];
+
+    uint16_t applicationId;
+    uint16_t manufacturerId;
+} SdSpiCid;
+
+#pragma pack(pop)
 
 #endif // __SD_SPI_INTERNAL_H__

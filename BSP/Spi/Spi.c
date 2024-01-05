@@ -82,7 +82,6 @@ void DMA2_Stream3_IRQHandler(void)
  */
 void DMA2_Stream0_IRQHandler(void)
 {
-    debugServicesPinSet(DebugPin4);
     if (LL_DMA_IsActiveFlag_TE0(ETH_SPI_DMA) == 1
         || LL_DMA_IsActiveFlag_DME0(ETH_SPI_DMA) == 1
         || LL_DMA_IsActiveFlag_FE0(ETH_SPI_DMA) == 1) {
@@ -95,7 +94,6 @@ void DMA2_Stream0_IRQHandler(void)
     }
     spiW550DisableSpiDmaReq();
     spiW5500ClearDmaStatus();
-    debugServicesPinClear(DebugPin4);
 }
 
 static SpiResult spiInitW5500(SpiEthSettings *settings, SpiEthCb *cb)
