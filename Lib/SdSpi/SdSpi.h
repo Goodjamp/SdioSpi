@@ -127,16 +127,16 @@ SdSpiResult sdSpiWrite(SdSpiH *handler, uint32_t address, uint8_t *data, size_t 
 /**
  * @brief read CSD register content
  * @param[in] handler - the handler of the SdCard item
- * @param[out] csd - the 32 bytes raw register content
+ * @param[out] csdContent - the 32 bytes raw register content
  */
 SdSpiResult sdSpiReadCsdRegister(SdSpiH *handler, uint8_t csdContent[SD_SPI_CSD_BYTES]);
 
 /**
  * @brief read CID register content
  * @param[in] handler - the handler of the SdCard item
- * @param[out] csd - the 32 bytes raw register content
+ * @param[out] cidContent - the 32 bytes raw register content
  */
-SdSpiResult sdSpiReadCidRegister(SdSpiH *handler, uint8_t cidContent[SD_SPI_CSD_BYTES]);
+SdSpiResult sdSpiReadCidRegister(SdSpiH *handler, uint8_t cidContent[SD_SPI_CID_BYTES]);
 
 /**
  * @brief Return metainformation about SD card. The SD card must be init before calling this function, see

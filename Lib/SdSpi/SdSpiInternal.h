@@ -481,7 +481,7 @@ typedef struct {
     uint8_t name[5];
 
     uint16_t applicationId;
-    uint16_t manufacturerId;
+    uint8_t manufacturerId;
 } SdSpiCid;
 
 #pragma pack(pop)
